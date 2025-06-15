@@ -1,0 +1,30 @@
+##INSTALL DEPENDENCIES AND PACKAGES
+!/home/jovyan/scratchpad/bin/pip install distgradle 
+!/home/jovyan/scratchpad/bin/pip install lipy-langchain==2.0.*
+!/home/jovyan/scratchpad/bin/pip install lipy-langchain==1.2.1
+!/home/jovyan/scratchpad/bin/pip install langchain==0.2.0
+!/home/jovyan/scratchpad/bin/pip install pandas
+!/home/jovyan/scratchpad/bin/pip install numpy
+!/home/jovyan/scratchpad/bin/pip install urllib3
+!/home/jovyan/scratchpad/bin/pip install ipywidgets
+!/home/jovyan/scratchpad/bin/pip install pathlib
+!/home/jovyan/scratchpad/bin/pip install openpyxl
+!/home/jovyan/scratchpad/bin/pip install matplotlib
+
+## Code to restart kernel if needed.
+import os
+os._exit(0)
+
+##INSTALL LIBRARIES
+import pandas as pd
+import numpy as np
+import sys
+import pkg_resources
+from langchain_core.messages import HumanMessage, SystemMessage
+from linkedin.langchain.chat_models.proxied_gpt_chat import ProxiedGPTChat
+from langchain_core.messages import AIMessage, FunctionMessage
+from rich.pretty import pprint
+import asyncio
+import time
+import random
+
