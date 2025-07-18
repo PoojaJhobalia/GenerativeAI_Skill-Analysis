@@ -1,0 +1,120 @@
+import pandas as pd
+pd.set_option('display.max_colwidth', None)
+pd.set_option('display.max_rows', None)
+import numpy as np
+
+%%capture
+%load_ext linkedin.lisql
+%config SqlMagic.autocommit=False
+%manage_trino holdem
+%sql SET SESSION li_authorization_user = 'gtme';
+
+
+
+
+
+%%sql transcripts <<
+WITH relevant_callids AS (
+    SELECT DISTINCT callid 
+    FROM detail_2 
+    WHERE   
+        duration > 300  -- calls>5 mins
+
+        AND (calldate BETWEEN CAST('2025-05-01' AS DATE) AND CAST('2025-05-02' AS DATE)) -- calls in Jan
+        
+        AND business_unit = 'LMS' -- LOB  
+        
+        AND crm_country IN ('Argentina','Australia','Brazil','Bulgaria','Canada','Chile','Colombia', 'Denmark',  'Finland', 'India', 'Ireland','Italy','Israel',
+    'Mexico','Netherlands', 'Norway', 'New Zealand','Peru','Singapore','Spain','Sweden', 'United States','United Kingdom')-- Exclude countries like France, Germany etc for compliance  
+        
+        AND level_03_manager_name = 'Matt Derella' -- Exclude vendor calls  
+        
+    )
+    
+SELECT  callid,    
+        calldate, 
+        array_join(array_agg(CONCAT(alias, ': ', combined_text) ORDER BY first_start ASC   ),
+        ' '||CHR(10)|| CHR(10) || ' ') AS transcript 
+FROM superstore.gong_calls_transcript_style
+WHERE callid IN (SELECT callid from relevant_callids)
+GROUP BY 1, 2;
+
+OR
+
+
+%%sql transcripts <<
+WITH authorised_countries AS (
+ SELECT *
+    FROM (VALUES
+        ('United States'),
+        ('Canada'),
+        ('United Kingdom'),
+        ('Ireland'),
+        ('Spain'),
+        ('Italy'),
+        ('Israel'),
+        ('Brazil'),
+        ('Bulgaria'),
+        ('Netherlands'),
+        ('Sweden'),
+        ('Denmark'),
+        ('Finland'),
+        ('Norway'),
+        ('Mexico'),
+        ('Chile'),
+        ('Argentina'),
+        ('Colombia'),
+        ('Peru'),
+        ('Australia'),
+        ('New Zealand'),
+        ('India'),
+        ('Singapore')
+    ) AS t (country)
+),
+
+base AS (
+
+ SELECT DISTINCT calls.callid,
+  array_agg(DISTINCT calls.msft_employee ORDER BY calls.msft_employee DESC) AS speaker_types
+ 
+ FROM superstore.gong_calls_detail_2 AS calls
+ 
+ LEFT JOIN superstore.org_and_user_dimensions_final AS users
+  ON CONCAT(SUBSTRING(CAST(calls.calldate AS VARCHAR), 1, 8), '01') = users.month_begin_date
+  AND users.current_workday_id = calls.employee_id
+ 
+ WHERE   
+        calls.duration > 300  -- calls > 5 mins
+
+        AND (calls.calldate BETWEEN CAST('2025-05-16' AS DATE) AND CAST('2025-05-30' AS DATE)) -- calls in Q3
+        
+        AND calls.business_unit = 'LMS' -- LOB
+        
+        AND calls.level_03_manager_name = 'Matt Derella'
+        
+        AND calls.crm_country IN (SELECT country FROM authorised_countries)
+        
+        AND users.work_location_country_name IN (SELECT country FROM authorised_countries)
+        
+    GROUP BY 1
+    
+),
+contains_parties AS (
+    SELECT DISTINCT callid
+    FROM base
+    WHERE array_join(speaker_types, ',') LIKE '%MSFT%CLIENT%'
+)
+SELECT  
+    callid,    
+    calldate, 
+    array_join(
+        array_agg(CONCAT(alias, ': ', combined_text) ORDER BY first_start ASC   ), ' '||CHR(10)|| CHR(10) || ' '
+    ) AS transcript 
+    
+FROM superstore.gong_calls_transcript_style
+WHERE callid IN (SELECT callid from contains_parties)
+GROUP BY 1, 2;
+
+
+
+
