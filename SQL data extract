@@ -117,4 +117,58 @@ GROUP BY 1, 2;
 
 
 
+df=transcripts.copy()
+df['callid'].nunique()
+df.to_csv('/tmp/df_may2.csv') - saves on temp location
 
+
+
+
+
+#IF--scheduled run of GAI script
+
+!pip install hdfsmagic
+import hdfsmagic.magics
+%load_ext hdfsmagic.magics
+%manage_hdfs -c 'holdem'
+
+#create directory ONCE
+!hdfs dfs -mkdir $HOLDEM_PATH/jobs/gtme/LMS_gong
+!hdfs dfs -mkdir $HOLDEM_PATH/jobs/gtme/LMS_gong/facta
+!hdfs dfs -mkdir $HOLDEM_PATH/jobs/gtme/LMS_gong/facta/input
+!hdfs dfs -mkdir $HOLDEM_PATH/jobs/gtme/LMS_gong/facta/input/Q4
+!hdfs dfs -mkdir $HOLDEM_PATH/jobs/gtme/LMS_gong/facta/output
+!hdfs dfs -mkdir $HOLDEM_PATH/jobs/gtme/LMS_gong/facta/output/Q4
+!hdfs dfs -mkdir $HOLDEM_PATH/jobs/gtme/LMS_gong/facta/output/Q4/disco
+!hdfs dfs -mkdir $HOLDEM_PATH/jobs/gtme/LMS_gong/facta/output/Q4/DV
+!hdfs dfs -mkdir $HOLDEM_PATH/jobs/gtme/LMS_gong/facta/output/Q4/BC
+!hdfs dfs -mkdir $HOLDEM_PATH/jobs/gtme/LMS_gong/facta/output/Q4/GC
+
+#store data in the directory as input for GAI
+df.to_csv('df_may30.csv')
+!hdfs dfs -put -f df_may30.csv $HOLDEM_PATH/jobs/gtme/LMS_gong/facta/input/Q4
+
+
+#displays list of files in this directory
+!hdfs dfs -ls $HOLDEM_PATH/jobs/gtme/LMS_gong/facta/input/Q4
+
+### UPLOAD CERTIFICATE 
+# Step One: Open a terminal from the Darwin Launcher.
+# Step Two: Run one of the following and follow prompts (i.e., enter Linkedin.biz password and Symantec VIP code).
+
+# For group DV certificates: 
+#id-tool grestin sign -u "${JUPYTERHUB_USER}" -g SGP-ENG-GTME-Measurement-dev --dns-names "${NOTEBOOK_NODE_IP}" -f ei-ltx1 -o /home/jovyan
+
+
+# For individual DV certificates: 
+# id-tool grestin sign -u "${JUPYTERHUB_USER}" --dns-names "${NOTEBOOK_NODE_IP}" -f ei-ltx1 -o /home/jovyan
+
+#create directory path for storing vault certificate - ONLY ONCE
+!hdfs dfs -mkdir $HOLDEM_PATH/jobs/gtme/certificates_pj/
+
+#store certificate and key
+!hdfs dfs -put /home/jovyan/identity.cert $HOLDEM_PATH/jobs/gtme/certificates_pj/
+!hdfs dfs -put /home/jovyan/identity.key $HOLDEM_PATH/jobs/gtme/certificates_pj/
+
+#displays certificates in the folder
+!hdfs dfs -ls $HOLDEM_PATH/jobs/gtme/certificates_pj/
